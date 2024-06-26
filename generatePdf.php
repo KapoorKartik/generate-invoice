@@ -56,22 +56,19 @@ function executeQuery($sql_query) {
 function fetchCurrentMonthData() {
 
     $currentYear = date('Y');
-    echo '<pre>'; print_r($currentYear); echo '</pre>';
+    // echo '<pre>'; print_r($currentYear); echo '</pre>';
     $currentMonth = date('m');
-    echo '<pre>'; print_r($currentMonth); echo '</pre>';
+    // echo '<pre>'; print_r($currentMonth); echo '</pre>';
 
-    $query = "SELECT * FROM payment_data WHERE DATE_FORMAT(created_at, '%Y-%m') = '$currentYear-$currentMonth'";
+    $query = "SELECT * FROM payment_data WHERE DATE_FORMAT(created_at, '%Y-%m') = '$currentYear-$currentMonth' Order By id DESC";
 
     $result = executeQuery($query);
-    echo '<pre> result '; print_r($result); echo '</pre>';
       // Check if the query was successful
       if ($result instanceof mysqli_result) {
-        // Fetch all rows and print them
         $rows = $result->fetch_all(MYSQLI_ASSOC);
-        
-        echo '<pre> Rows '; print_r($rows); echo '</pre>';
+        return $rows;
     } else {
-        echo '<pre> Error: Failed to retrieve data. </pre>';
+        return 'Error: Failed to retrieve data.';
     }
 
     
@@ -81,17 +78,46 @@ function fetchCurrentMonthData() {
 
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    // Assuming the path to the HTML file and variables are passed as query parameters
-    // $htmlFilePath = $_GET['htmlFilePath'];
-    // $variables = json_decode($_GET['variables'], true);
-    // $outputFilename = $_GET['outputFilename'];
-    fetchCurrentMonthData();
+    $res = fetchCurrentMonthData();
+    echo json_encode($res);
 }else if ($_SERVER['REQUEST_METHOD'] === 'POST'){
-    echo "post method";
-    die;
+    // capture data from from request
+    $data = json_decode(file_get_contents('php://input'), true);
+    // print_r($data);
+    // data is Array ( [id] => 26 [product] => PDF (Send on WhatsApp) [name] => allen [mobile] => 3213213215 [email] => kartikkapoor485@gmail.com [address] => 456 Oak Avenue, Metropolis, NY 10001 [pincode] => 321321 [state] => Jammu and Kashmir [amount] => 100.00 [order_id] => order_OIxkHLd6DtMbSu [receipt_id] => rcptid_665ff64aad8fe [payment_status] => Successful [created_at] => 2024-06-05 10:53:23 [invoiceNum] => 9876 )
+    // capture all in variables
+    $id = $data['id'];
+    $product = $data['product'];
+    $name = $data['name'];
+    $mobile = $data['mobile'];
+    $email = $data['email'];
+    $address = $data['address'];
+    $pincode = $data['pincode'];
+    $state = $data['state'];
+    $amount = $data['amount'];
+    $order_id = $data['order_id'];
+    $receipt_id = $data['receipt_id'];
+    $payment_status = $data['payment_status'];
+    $created_at = $data['created_at'];
+    $invoiceNum = $data['invoiceNum'];
+    // die;
     $variables = [
         'title' => 'Hare Krishna',
-        'content' => 'This is the content.'
+        'content' => 'This is the content.',
+        'invoiceNumber' => $invoiceNum,
+        'id' => $id,
+        'product' => $product,
+        'name' => $name,
+        'mobile' => $mobile,
+        'email' => $email,
+        'address' => $address,
+        'pincode' => $pincode,
+        'state' => $state,
+        'amount' => $amount,
+        'order_id' => $order_id,
+        'receipt_id' => $receipt_id,
+        'payment_status' => $payment_status,
+        'created_at' => $created_at,
     ];
     $outputFilename = 'output.pdf';
     $htmlFilePath = "./template.html";
