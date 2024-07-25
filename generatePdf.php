@@ -57,10 +57,10 @@ function fetchCurrentMonthData() {
 
     $currentYear = date('Y');
     // echo '<pre>'; print_r($currentYear); echo '</pre>';
-    $currentMonth = date('m');
+    $currentMonth = date('m', strtotime('-3 month'));
     // echo '<pre>'; print_r($currentMonth); echo '</pre>';
 
-    $query = "SELECT * FROM payment_data WHERE DATE_FORMAT(created_at, '%Y-%m') = '$currentYear-$currentMonth' Order By id DESC";
+    $query = "SELECT * FROM payment_data  Order By id DESC";
 
     $result = executeQuery($query);
       // Check if the query was successful
@@ -73,6 +73,58 @@ function fetchCurrentMonthData() {
 
     
 
+}
+
+function convertNumberToWords($number) {
+    $dictionary = [
+        0 => 'zero', 1 => 'one', 2 => 'two', 3 => 'three', 4 => 'four',
+        5 => 'five', 6 => 'six', 7 => 'seven', 8 => 'eight', 9 => 'nine',
+        10 => 'ten', 11 => 'eleven', 12 => 'twelve', 13 => 'thirteen',
+        14 => 'fourteen', 15 => 'fifteen', 16 => 'sixteen', 17 => 'seventeen',
+        18 => 'eighteen', 19 => 'nineteen', 20 => 'twenty', 30 => 'thirty',
+        40 => 'forty', 50 => 'fifty', 60 => 'sixty', 70 => 'seventy',
+        80 => 'eighty', 90 => 'ninety', 100 => 'hundred', 1000 => 'thousand'
+    ];
+
+    if (!is_numeric($number)) {
+        return false;
+    }
+
+    if ($number < 0 || $number > 10000) {
+        return false;
+    }
+
+    if ($number == 0) {
+        return $dictionary[0];
+    }
+
+    $string = '';
+
+    if ($number >= 1000) {
+        $string .= $dictionary[(int)($number / 1000)] . ' thousand ';
+        $number %= 1000;
+    }
+
+    if ($number >= 100) {
+        $string .= $dictionary[(int)($number / 100)] . ' hundred ';
+        $number %= 100;
+        if ($number > 0) {
+            $string .= 'and ';
+        }
+    }
+
+    if ($number > 0) {
+        if ($number < 20) {
+            $string .= $dictionary[$number];
+        } else {
+            $string .= $dictionary[(int)($number / 10) * 10];
+            if ($number % 10 > 0) {
+                $string .= '-' . $dictionary[$number % 10];
+            }
+        }
+    }
+
+    return ucwords($string);
 }
 
 
@@ -100,6 +152,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $payment_status = $data['payment_status'];
     $created_at = $data['created_at'];
     $invoiceNum = $data['invoiceNum'];
+
+    $amtWithoutGst = round($amount  * 100/118,2);
+    $gst = $amount - $amtWithoutGst;
     // die;
     $variables = [
         'title' => 'Hare Krishna',
@@ -118,7 +173,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         'receipt_id' => $receipt_id,
         'payment_status' => $payment_status,
         'created_at' => $created_at,
+        'gst' => $gst,
+        'amountWithoutGst' => $amtWithoutGst,
+        'amountInWords' => convertNumberToWords($amount),
     ];
+    // echo(convertNumberToWords($amount));
+
+    // print_r($variables);
+ 
+    // echo 'gst is ' . $gst . ' and amount without gst is ' . $amtWithoutGst .'sum is ' . ($amtWithoutGst + $gst);
+    // die;
     $outputFilename = 'output.pdf';
     $htmlFilePath = "./template.html";
     generatePDF($htmlFilePath, $variables, $outputFilename);
