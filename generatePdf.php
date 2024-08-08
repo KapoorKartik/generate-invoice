@@ -1,5 +1,9 @@
 <?php
 // Include the DOMPDF library
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 require_once 'dompdf/autoload.inc.php';
 
 use Dompdf\Dompdf;
@@ -29,11 +33,22 @@ function generatePDF($htmlFilePath, $variables, $outputFilename) {
 }
 
 function executeQuery($sql_query) {
-    // Database connection parameters
-    $servername = "localhost";
-    $username = "root"; // Default username for XAMPP MySQL
-    $password = ""; // Default password for XAMPP MySQL
-    $database = "user_db"; // Replace with your database name
+    $environment = 'development'; // Change to 'production' for production environment
+    // $environment = 'production';
+
+      if ($environment === 'development') {
+        $servername = "localhost";
+        $username = "root"; 
+        $password = ""; 
+        $database = "user_db"; 
+    } else if ($environment === 'production') {
+        $servername = "localhost";
+        $username = "u850205723_payments"; // Default username for XAMPP MySQL
+        $password = "A7N?XkO[Snc|"; // Default password for XAMPP MySQL
+        $database = "u850205723_payments"; // Replace with your database name
+    } else {
+        die("Unknown environment");
+    }
 
     // Create connection
     $conn = new mysqli($servername, $username, $password, $database);
@@ -53,14 +68,19 @@ function executeQuery($sql_query) {
     return $result;
 }
 
-function fetchCurrentMonthData() {
+    function fetchMonthData($currentMonth) {
 
     $currentYear = date('Y');
     // echo '<pre>'; print_r($currentYear); echo '</pre>';
-    $currentMonth = date('m', strtotime('-3 month'));
+    // $currentMonth = date('m', strtotime('-5 month'));
     // echo '<pre>'; print_r($currentMonth); echo '</pre>';
 
-    $query = "SELECT * FROM payment_data  Order By id DESC";
+    // $query = "SELECT * FROM payment_data where payment_status = 'Successful' 
+        // --   ORDER BY id DESC";
+
+    $query = "SELECT * FROM payment_data WHERE DATE_FORMAT(created_at, '%Y-%m') = '$currentYear-$currentMonth' AND  payment_status = 'Successful' Order By id DESC";
+
+
 
     $result = executeQuery($query);
       // Check if the query was successful
@@ -128,16 +148,65 @@ function convertNumberToWords($number) {
 }
 
 
+function getStateCode($state){
+    $stateCodeArr = array(
+        "Jammu & Kashmir" => 1,
+        "Himachal Pradesh" => 2,
+        "Punjab" => 3,
+        "Chandigarh" => 4,
+        "Uttarakhand" => 5,
+        "Haryana" => 6,
+        "Delhi" => 7,
+        "Rajasthan" => 8,
+        "Uttar Pradesh" => 9,
+        "Bihar" => 10,
+        "Sikkim" => 11,
+        "Arunachal Pradesh" => 12,
+        "Nagaland" => 13,
+        "Manipur" => 14,
+        "Mizoram" => 15,
+        "Tripura" => 16,
+        "Meghalaya" => 17,
+        "Assam" => 18,
+        "West Bengal" => 19,
+        "Jharkhand" => 20,
+        "Odisha" => 21,
+        "Chattisgarh" => 22,
+        "Madhya Pradesh" => 23,
+        "Gujarat" => 24,
+        "Daman & Diu" => 25,
+        "Dadra & Nagar Haveli" => 26,
+        "Maharashtra" => 27,
+        "Andhra Pradesh (Before Division)" => 28,
+        "Karnataka" => 29,
+        "Goa" => 30,
+        "Lakshadweep" => 31,
+        "Kerala" => 32,
+        "Tamil Nadu" => 33,
+        "Puducherry" => 34,
+        "Andaman & Nicobar Islands" => 35,
+        "Telangana" => 36,
+        "Andhra Pradesh (Newly Added)" => 37,
+        "Ladakh" => 38,
+        "Other Territory" => 97,
+        "Centre Jurisdiction" => 99
+    );
+
+    return  $stateCodeArr[$state];
+}
+
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $res = fetchCurrentMonthData();
+
+    $month = isset($_GET['month']) ? $_GET['month'] : null;
+    $res = fetchMonthData($month);
     echo json_encode($res);
+
 }else if ($_SERVER['REQUEST_METHOD'] === 'POST'){
     // capture data from from request
     $data = json_decode(file_get_contents('php://input'), true);
-    // print_r($data);
-    // data is Array ( [id] => 26 [product] => PDF (Send on WhatsApp) [name] => allen [mobile] => 3213213215 [email] => kartikkapoor485@gmail.com [address] => 456 Oak Avenue, Metropolis, NY 10001 [pincode] => 321321 [state] => Jammu and Kashmir [amount] => 100.00 [order_id] => order_OIxkHLd6DtMbSu [receipt_id] => rcptid_665ff64aad8fe [payment_status] => Successful [created_at] => 2024-06-05 10:53:23 [invoiceNum] => 9876 )
-    // capture all in variables
+
     $id = $data['id'];
     $product = $data['product'];
     $name = $data['name'];
@@ -157,8 +226,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $gst = $amount - $amtWithoutGst;
     // die;
     $variables = [
-        'title' => 'Hare Krishna',
-        'content' => 'This is the content.',
         'invoiceNumber' => $invoiceNum,
         'id' => $id,
         'product' => $product,
@@ -176,13 +243,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         'gst' => $gst,
         'amountWithoutGst' => $amtWithoutGst,
         'amountInWords' => convertNumberToWords($amount),
+        'stateCode' => getStateCode($state),
     ];
-    // echo(convertNumberToWords($amount));
-
-    // print_r($variables);
- 
-    // echo 'gst is ' . $gst . ' and amount without gst is ' . $amtWithoutGst .'sum is ' . ($amtWithoutGst + $gst);
-    // die;
     $outputFilename = 'output.pdf';
     $htmlFilePath = "./template.html";
     generatePDF($htmlFilePath, $variables, $outputFilename);
